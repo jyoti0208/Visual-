@@ -1,0 +1,232 @@
+var SalePrice = [];
+var LotArea = [];
+let myMap = new Map()
+var category = ["SaleCondition", "Utilities"];
+///
+
+var margin = {top: 20, right: 20, bottom: 30, left: 40},
+width = 960 - margin.left - margin.right,
+height = 500 - margin.top - margin.bottom;
+
+//Parse CSV file.
+d3.csv("test_data.csv", function(csvdata) {
+		
+    csvdata.map(function(d) {
+        SalePrice.push(+d.SalePrice);
+        LotArea.push(+d.LotArea);
+    })
+    for(let i = 0; i < category.length; i++){
+    	myMap.set(category[i], getSum(csvdata, category[i]));
+    }
+    console.log("map...", LotArea);
+});
+
+
+function getSum(data, key){
+	var expensesCount = d3.nest()
+  .key(function(d) { return d[key]; })
+  .rollup(function(v) { return v.length; })
+  .entries(data);
+return expensesCount;
+
+}
+
+
+function htFn(id) {	
+	document.getElementById("bar").innerHTML = '';
+	if( category.indexOf(id) > -1){
+		plotBarGraph(id);
+	} else{
+		if(id =="LotArea"){
+			plotHistoGram(LotArea);
+		}else if(id =="SalePrice"){
+			plotHistoGram(SalePrice);
+		}
+		
+	}
+}
+/////
+
+
+function plotBarGraph(id){
+	data = myMap.get(id);
+	console.log("data..",data);
+
+	var x = d3.scaleBand()
+          .range([0, width])
+          .padding(0.1);
+	var y = d3.scaleLinear()
+          .range([height, 0]);
+    var svg = d3.select("#bar").append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+  .append("g")
+    .attr("transform", 
+          "translate(" + margin.left + "," + margin.top + ")");
+
+    x.domain(data.map(function(d) { return d.key; }));
+  	y.domain([0, d3.max(data, function(d) { return d.value; })]);
+
+  	 svg.selectAll(".bar")
+      .data(data)
+    .enter().append("rect")
+      .attr("class", "bar")
+      .attr("x", function(d) { return x(d.key); })
+      .attr("width", x.bandwidth())
+      .attr("y", function(d) { return y(d.value); })
+      .attr("height", function(d) { return height - y(d.value); });
+
+  // add the x Axis
+  svg.append("g")
+      .attr("transform", "translate(0," + height + ")")
+      .call(d3.axisBottom(x));
+
+  // add the y Axis
+  svg.append("g")
+      .call(d3.axisLeft(y));
+
+
+
+
+
+	////
+	// var svg = d3.select("#bar").append("svg")
+ //    .attr("width", width + margin.left + margin.right)
+ //    .attr("height", height + margin.top + margin.bottom)
+ //  .append("g")
+ //    .attr("transform", 
+ //          "translate(" + margin.left + "," + margin.top + ")");
+
+	
+	// console.log("here..", data)
+	// x.domain(data.map(function(d) { return d.key; }));
+	// y.domain([0, d3.max(data, function(d) { return d.values; })]);
+	// svg.append("g")
+ //      .attr("class", "x axis")
+ //      .attr("transform", "translate(0," + height + ")")
+ //      .call(xAxis)
+ //    .selectAll("text")
+ //      .style("text-anchor", "end")
+ //      .attr("dx", "-.8em")
+ //      .attr("dy", "-.55em")
+ //      .attr("transform", "rotate(-90)" );
+
+ //  svg.append("g")
+ //      .attr("class", "y axis")
+ //      .call(yAxis)
+ //    .append("text")
+ //      .attr("transform", "rotate(-90)")
+ //      .attr("y", 6)
+ //      .attr("dy", ".71em")
+ //      .style("text-anchor", "end")
+ //      .text("Value ($)");
+
+ //  svg.selectAll("bar")
+ //      .data(data)
+ //    .enter().append("rect")
+ //      .style("fill", "steelblue")
+ //      .attr("x", function(d) { return x(d.key); })
+ //      .attr("width", x.rangeBand())
+ //      .attr("y", function(d) { return y(d.values); })
+ //      .attr("height", function(d) { return height - y(d.values); });
+
+
+}
+function plotHistoGram(values){
+var color = "steelblue";
+var formatCount = d3.format(",.0f");
+var max = d3.max(values);
+var min = d3.min(values);
+var x = d3.scale.linear()
+      .domain([min, max])
+      .range([0, width]);
+
+// Generate a histogram using twenty uniformly-spaced bins.
+var data = d3.layout.histogram()
+    .bins(x.ticks(20))
+    (values);
+
+var yMax = d3.max(data, function(d){return d.length});
+var yMin = d3.min(data, function(d){return d.length});
+var colorScale = d3.scale.linear()
+            .domain([yMin, yMax])
+            .range([d3.rgb(color).brighter(), d3.rgb(color).darker()]);
+
+var y = d3.scale.linear()
+    .domain([0, yMax])
+    .range([height, 0]);
+
+var xAxis = d3.svg.axis()
+    .scale(x)
+    .orient("bottom");
+
+var svg = d3.select("#bar").append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+  .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")").on('mouseover',mouseover)
+      .on('mouseout',mouseout);
+
+var bar = svg.selectAll(".bar")
+    .data(data)
+  .enter().append("g")
+    .attr("class", "bar")
+    .attr("transform", function(d) { return "translate(" + x(d.x) + "," + y(d.y) + ")"; });
+
+bar.append("rect")
+    .attr("x", 1)
+    .attr("width", (x(data[0].dx) - x(0)) - 1)
+    .attr("height", function(d) { return height - y(d.y); })
+    .attr("fill", function(d) { return colorScale(d.y) });
+
+bar.append("text")
+    .attr("dy", ".75em")
+    .attr("y", -12)
+    .attr("x", (x(data[0].dx) - x(0)) / 2)
+    .attr("text-anchor", "middle")
+    .text(function(d) { return formatCount(d.y); });
+
+svg.append("g")
+    .attr("class", "x axis")
+    .attr("transform", "translate(0," + height + ")")
+    .call(xAxis);
+
+}
+
+function mouseover(data,index){
+    var bar = d3.select(this)
+  var width = bar.attr('width')
+  var height = bar.attr('height')
+
+  var scale = 1.5;
+
+  var newWidth = width* scale;
+  var newHeight = height*scale;
+
+  var shift = (newWidth - width)/2
+
+  bar.transition()
+    .style('transform','scale('+scale+')')
+
+
+  d3.selectAll('.bar')
+    .filter((d,i)=> i < index)
+    .transition()
+    .style('transform','translateX(-'+shift+'px)')
+
+    d3.selectAll('.bar')
+    .filter((d,i)=> i > index)
+    .transition()
+    .style('transform','translateX('+shift+'px)')
+
+
+}
+
+function mouseout(data,index){
+d3.select(this).transition().style('transform','scale(1)')
+d3.selectAll('.bar')
+  .filter(d=>d.letter !== data.letter)
+  .transition()
+  .style('transform','translateX(0)')
+}
+
