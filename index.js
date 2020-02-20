@@ -1,7 +1,12 @@
 var SalePrice = [];
 var LotArea = [];
+var TotalBsmtSF=[];
+var GarageArea=[]
+var WoodDeckSF=[]
+var FirstFloor=[]
+var MasVnrArea=[]
 let myMap = new Map()
-var category = ["SaleCondition", "Utilities"];
+var category = ["SaleCondition", "Utilities", "LotConfig", "Neighborhood","LandSlope","HouseStyle","RoofMatl", "Heating" , "Electrical", "YrSold"];
 ///
 
 var margin = {top: 20, right: 20, bottom: 30, left: 40},
@@ -31,7 +36,6 @@ return expensesCount;
 
 }
 
-
 function htFn(id) {	
 	document.getElementById("bar").innerHTML = '';
 	if( category.indexOf(id) > -1){
@@ -41,14 +45,30 @@ function htFn(id) {
 			plotHistoGram(LotArea);
 		}else if(id =="SalePrice"){
 			plotHistoGram(SalePrice);
+		} else if(id =="TotalBsmtSF"){
+			plotHistoGram(TotalBsmtSF);
+		} else if(id =="GarageArea"){
+			plotHistoGram(GarageArea);
+		} else if(id =="WoodDeckSF"){
+			plotHistoGram(WoodDeckSF);
+		} else if(id =="MasVnrArea"){
+			plotHistoGram(MasVnrArea);
+		} else if(id == "FirstFloor"){
+			plotHistoGram(FirstFloor);
 		}
-		
 	}
 }
-/////
+
 
 
 function plotBarGraph(id){
+	var tooltip = d3.select("body")
+    .append("div")
+    .style("position", "absolute")
+    .style("z-index", "10")
+    .style("visibility", "hidden")
+    .style("background", "f1f1f1")
+    .text("a simple tooltip");
 	data = myMap.get(id);
 	console.log("data..",data);
 
@@ -70,11 +90,13 @@ function plotBarGraph(id){
   	 svg.selectAll(".bar")
       .data(data)
     .enter().append("rect")
-      .attr("class", "bar")
+      .attr("class", "barNew")
       .attr("x", function(d) { return x(d.key); })
       .attr("width", x.bandwidth())
       .attr("y", function(d) { return y(d.value); })
-      .attr("height", function(d) { return height - y(d.value); });
+      .attr("height", function(d) { return height - y(d.value); }).on("mouseover", function(d){tooltip.text(d); return tooltip.style("visibility", "visible");})
+      .on("mousemove", function(){return tooltip.style("top", (d3.event.pageY-10)+"px").style("left",(d3.event.pageX+10)+"px");})
+      .on("mouseout", function(){return tooltip.style("visibility", "hidden");});;
 
   // add the x Axis
   svg.append("g")
@@ -84,53 +106,6 @@ function plotBarGraph(id){
   // add the y Axis
   svg.append("g")
       .call(d3.axisLeft(y));
-
-
-
-
-
-	////
-	// var svg = d3.select("#bar").append("svg")
- //    .attr("width", width + margin.left + margin.right)
- //    .attr("height", height + margin.top + margin.bottom)
- //  .append("g")
- //    .attr("transform", 
- //          "translate(" + margin.left + "," + margin.top + ")");
-
-	
-	// console.log("here..", data)
-	// x.domain(data.map(function(d) { return d.key; }));
-	// y.domain([0, d3.max(data, function(d) { return d.values; })]);
-	// svg.append("g")
- //      .attr("class", "x axis")
- //      .attr("transform", "translate(0," + height + ")")
- //      .call(xAxis)
- //    .selectAll("text")
- //      .style("text-anchor", "end")
- //      .attr("dx", "-.8em")
- //      .attr("dy", "-.55em")
- //      .attr("transform", "rotate(-90)" );
-
- //  svg.append("g")
- //      .attr("class", "y axis")
- //      .call(yAxis)
- //    .append("text")
- //      .attr("transform", "rotate(-90)")
- //      .attr("y", 6)
- //      .attr("dy", ".71em")
- //      .style("text-anchor", "end")
- //      .text("Value ($)");
-
- //  svg.selectAll("bar")
- //      .data(data)
- //    .enter().append("rect")
- //      .style("fill", "steelblue")
- //      .attr("x", function(d) { return x(d.key); })
- //      .attr("width", x.rangeBand())
- //      .attr("y", function(d) { return y(d.values); })
- //      .attr("height", function(d) { return height - y(d.values); });
-
-
 }
 function plotHistoGram(values){
 var color = "steelblue";
@@ -193,40 +168,5 @@ svg.append("g")
 
 }
 
-function mouseover(data,index){
-    var bar = d3.select(this)
-  var width = bar.attr('width')
-  var height = bar.attr('height')
 
-  var scale = 1.5;
-
-  var newWidth = width* scale;
-  var newHeight = height*scale;
-
-  var shift = (newWidth - width)/2
-
-  bar.transition()
-    .style('transform','scale('+scale+')')
-
-
-  d3.selectAll('.bar')
-    .filter((d,i)=> i < index)
-    .transition()
-    .style('transform','translateX(-'+shift+'px)')
-
-    d3.selectAll('.bar')
-    .filter((d,i)=> i > index)
-    .transition()
-    .style('transform','translateX('+shift+'px)')
-
-
-}
-
-function mouseout(data,index){
-d3.select(this).transition().style('transform','scale(1)')
-d3.selectAll('.bar')
-  .filter(d=>d.letter !== data.letter)
-  .transition()
-  .style('transform','translateX(0)')
-}
 
