@@ -100,9 +100,10 @@ function plotBarGraph(id){
       .attr("x", function(d) { return x(d.key); })
       .attr("width", x.bandwidth())
       .attr("y", function(d) { return y(d.value); })
-      .attr("height", function(d) { return height - y(d.value); }).on("mouseover", function(d){tooltip.text(d); return tooltip.style("visibility", "visible");})
-      .on("mousemove", function(){return tooltip.style("top", (d3.event.pageY-10)+"px").style("left",(d3.event.pageX+10)+"px");})
-      .on("mouseout", function(){return tooltip.style("visibility", "hidden");});;
+      .attr("height", function(d) { return height - y(d.value); }).on("mouseover", handleMouseOver)
+            .on("mouseout", handleMouseOut);
+
+
 
   // add the x Axis
   svg.append("g")
@@ -114,56 +115,178 @@ function plotBarGraph(id){
       .call(d3.axisLeft(y));
 }
 
+            function handleMouseOver(d, i) {  // Add interactivity
 
-function plotHistoGram(data){
-	console.log("data...", data);
-	var margin = {top: 10, right: 30, bottom: 30, left: 40},
-    width = 460 - margin.left - margin.right,
-    height = 400 - margin.top - margin.bottom;
+            // Use D3 to select element, change color and size
+            d3.select(this).attr({
+              fill: "orange",
+            });
 
-	var svg = d3.select("#my_dataviz")
-  	.append("svg")
-    .attr("width", width + margin.left + margin.right)
-    .attr("height", height + margin.top + margin.bottom)
-  .append("g")
-    .attr("transform",
-          "translate(" + margin.left + "," + margin.top + ")");
+            // Specify where to put label of text
+            svg.append("text").attr({
+               id: "t" + d.x + "-" + d.y + "-" + i,  // Create an id for text so we can select it later for removing on mouseout
+                x: function() { return xScale(d.x) - 30; },
+                y: function() { return yScale(d.y) - 15; }
+            })
+            .text(function() {
+              return [d.x, d.y];  // Value of the text
+            });
+          }
+
+      function handleMouseOut(d, i) {
+            // Use D3 to select element, change color back to normal
+            d3.select(this).attr({
+              fill: "black",
+              r: radius
+            });
+
+            // Select text by id and then remove
+            d3.select("#t" + d.x + "-" + d.y + "-" + i).remove();  // Remove text location
+          }
 
 
-  // X axis: scale and draw:
-  var x = d3.scaleLinear()
-      .domain([0, 1000])     // can use this instead of 1000 to have the max of data: d3.max(data, function(d) { return +d.price })
-      .range([0, width]);
-  svg.append("g")
-      .attr("transform", "translate(0," + height + ")")
-      .call(d3.axisBottom(x));
+function plotHistoGram(histData){
+	var noOfBins = 15;
+	var binWidth = (d3.max(histData) - d3.min(histData))/(noOfBins-1);
+    
+    // create an empty feature frequency array
+    ftrFreq = Array.apply(null, Array(noOfBins)).map(Number.prototype.valueOf,0);
+    binValues = [];
 
-  // set the parameters for the histogram
-  var histogram = d3.histogram()
-      .value(function(d) { return d; })   // I need to give the vector of value
-      .domain(x.domain())  // then the domain of the graphic
-      .thresholds(x.ticks(70)); // then the numbers of bins
+    // populate ftrFreq array
+    histData.forEach(function(d){
+        ftrFreq[Math.floor((d - d3.min(histData))/binWidth)]++;
+    })
 
-  // And apply this function to data to get the bins
-  var bins = histogram(data);
+    //populate binValues
+    var min = d3.min(histData);
+    for(i=0; i<noOfBins; i++){
+    	var end = (+min + +binWidth).toFixed(1);
+    	binValues.push(min + "-" + end);
+    	min = end;
+    }
 
-  // Y axis: scale and draw:
-  var y = d3.scaleLinear()
-      .range([height, 0]);
-      y.domain([0, d3.max(bins, function(d) { return d.length; })]);   // d3.hist has to be called before the Y axis obviously
-  svg.append("g")
-      .call(d3.axisLeft(y));
 
-  // append the bar rectangles to the svg element
-  svg.selectAll("rect")
-      .data(bins)
-      .enter()
-      .append("rect")
-        .attr("x", 1)
-        .attr("transform", function(d) { return "translate(" + x(d.x0) + "," + y(d.length) + ")"; })
-        .attr("width", function(d) { return x(d.x1) - x(d.x0) -1 ; })
-        .attr("height", function(d) { return height - y(d.length); })
-        .style("fill", "#69b3a2")
+
+    var x = d3.scaleBand()
+          .range([0, width])
+          .padding(0.1);
+	var y = d3.scaleLinear()
+          .range([height, 0]);
+
+// x axis of bar chart
+var xAxis = d3.svg.axis()
+    .scale(x)
+    .orient("bottom");
+
+// y axis of bar chart
+var yAxis = d3.svg.axis()
+    .scale(y)
+    .orient("left")
+    .ticks(10);
+	 var scaleHeight = (0.9*h/d3.max(histData));
+
+    //Create SVG element. This is my bar chart/histogram element
+    var svg = d3.select("#bar")
+        .append("svg")
+        .attr("width", w + margin.left + margin.right)
+        .attr("height", h + margin.top + margin.bottom)
+        .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
+
+    //Set background color of svg container or chart.
+    svg.append("rect")
+        .attr("width", "100%")
+        .attr("height", "100%")
+        .attr("fill", "aliceblue");
+
+    //colors for bar chart.
+    var color = d3.scale.category20();
+
+    //Append y axis to chart.
+    svg.append("g")
+        .attr("class", "y axis")
+        .append("text") 
+        .attr("transform", "rotate(-90)")
+        .attr("y", 6)
+        .attr("dy", ".71em")
+        .style("text-anchor", "end")
+        .text("Frequency");
+
+    svg.append("g")
+        .attr("class", "x axis")
+        .attr("transform", "translate(0," + h + ")")
+        .call(xAxis);
+
+    y.domain([0, d3.max(histData, function(d) {
+        return d;
+    })]);
+
+    // x.domain(binValues)
+    //     .rangePoints([0, w]);
+
+    svg.select(".y.axis").call(yAxis);
+
+    var tip = d3.tip()
+        .attr('class', 'd3-tip')
+        .offset([-10, 0])
+    
+    svg.call(tip);
+
+    //create histogram bins and its events (mouse-over, mouse-out and click)
+    svg.selectAll(".bar")
+        .data(histData)
+    .enter().append("rect")
+        .attr("class", "bar")
+        .attr('fill', function(d,i){
+            return color(i);
+        })
+        .attr("x", function(d, i) {
+            return i * (w / histData.length);
+        })
+        .attr("y", function(d) {
+            return h - (d * scaleHeight);
+        })
+        .attr("width", w / histData.length - barPadding)
+        .attr("height", function(d) {
+            return d * scaleHeight;
+        })
+        
+        .on("mouseover", function(d,i) {
+            // on mouse-over make the bin wider and higher to focus on it
+            d3.select(this)
+            // .transition().duration(500)
+            .attr("x",i * (w / histData.length) - 5)
+            .attr("y", parseInt(d3.select(this).attr("y")) - 15)         
+            .attr("width",w / histData.length - barPadding + 10)
+            .attr("height",parseInt(d3.select(this).attr("height")) + 15);
+            
+            tip.html( "<strong> <span style='color:red'>" + d + "</span></strong>");
+            tip.show();
+
+
+        })
+        
+        .on("mouseout", function(d,i) {
+            // on mouse-out make the bin back to normal size
+            d3.select(this)   
+            // .transition().duration(500)
+            .attr("x",i * (w / histData.length))         
+            .attr("y",parseInt(d3.select(this).attr("y")) + 15)            
+            .attr("width", w / histData.length - barPadding)
+            .attr("height",parseInt(d3.select(this).attr("height")) - 15)  
+
+            tip.hide();
+
+  
+        })
+
+        .on("click", function() {
+            document.getElementById("bar").innerHTML = '';
+            tip.hide();
+            createPieChart(histData);      
+            chartType = 1;      
+        })
+
 
 
 }
