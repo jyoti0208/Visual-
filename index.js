@@ -14,11 +14,17 @@ width = 960 - margin.left - margin.right,
 height = 500 - margin.top - margin.bottom;
 
 //Parse CSV file.
-d3.csv("test_data.csv", function(csvdata) {
+d3.csv("test_data_2.csv", function(csvdata) {
 		
     csvdata.map(function(d) {
         SalePrice.push(+d.SalePrice);
         LotArea.push(+d.LotArea);
+        TotalBsmtSF.push(+d.TotalBsmtSF);
+        GarageArea.push(+d.GarageArea);
+        WoodDeckSF.push(+d.WoodDeckSF);
+        FirstFloor.push(+d.FirstFloor);
+        MasVnrArea.push(+d.MasVnrArea);
+
     })
     for(let i = 0; i < category.length; i++){
     	myMap.set(category[i], getSum(csvdata, category[i]));
@@ -107,64 +113,58 @@ function plotBarGraph(id){
   svg.append("g")
       .call(d3.axisLeft(y));
 }
-function plotHistoGram(values){
-var color = "steelblue";
-var formatCount = d3.format(",.0f");
-var max = d3.max(values);
-var min = d3.min(values);
-var x = d3.scale.linear()
-      .domain([min, max])
-      .range([0, width]);
 
-// Generate a histogram using twenty uniformly-spaced bins.
-var data = d3.layout.histogram()
-    .bins(x.ticks(20))
-    (values);
 
-var yMax = d3.max(data, function(d){return d.length});
-var yMin = d3.min(data, function(d){return d.length});
-var colorScale = d3.scale.linear()
-            .domain([yMin, yMax])
-            .range([d3.rgb(color).brighter(), d3.rgb(color).darker()]);
+function plotHistoGram(data){
+	console.log("data...", data);
+	var margin = {top: 10, right: 30, bottom: 30, left: 40},
+    width = 460 - margin.left - margin.right,
+    height = 400 - margin.top - margin.bottom;
 
-var y = d3.scale.linear()
-    .domain([0, yMax])
-    .range([height, 0]);
-
-var xAxis = d3.svg.axis()
-    .scale(x)
-    .orient("bottom");
-
-var svg = d3.select("#bar").append("svg")
+	var svg = d3.select("#my_dataviz")
+  	.append("svg")
     .attr("width", width + margin.left + margin.right)
     .attr("height", height + margin.top + margin.bottom)
   .append("g")
-    .attr("transform", "translate(" + margin.left + "," + margin.top + ")").on('mouseover',mouseover)
-      .on('mouseout',mouseout);
+    .attr("transform",
+          "translate(" + margin.left + "," + margin.top + ")");
 
-var bar = svg.selectAll(".bar")
-    .data(data)
-  .enter().append("g")
-    .attr("class", "bar")
-    .attr("transform", function(d) { return "translate(" + x(d.x) + "," + y(d.y) + ")"; });
 
-bar.append("rect")
-    .attr("x", 1)
-    .attr("width", (x(data[0].dx) - x(0)) - 1)
-    .attr("height", function(d) { return height - y(d.y); })
-    .attr("fill", function(d) { return colorScale(d.y) });
+  // X axis: scale and draw:
+  var x = d3.scaleLinear()
+      .domain([0, 1000])     // can use this instead of 1000 to have the max of data: d3.max(data, function(d) { return +d.price })
+      .range([0, width]);
+  svg.append("g")
+      .attr("transform", "translate(0," + height + ")")
+      .call(d3.axisBottom(x));
 
-bar.append("text")
-    .attr("dy", ".75em")
-    .attr("y", -12)
-    .attr("x", (x(data[0].dx) - x(0)) / 2)
-    .attr("text-anchor", "middle")
-    .text(function(d) { return formatCount(d.y); });
+  // set the parameters for the histogram
+  var histogram = d3.histogram()
+      .value(function(d) { return d; })   // I need to give the vector of value
+      .domain(x.domain())  // then the domain of the graphic
+      .thresholds(x.ticks(70)); // then the numbers of bins
 
-svg.append("g")
-    .attr("class", "x axis")
-    .attr("transform", "translate(0," + height + ")")
-    .call(xAxis);
+  // And apply this function to data to get the bins
+  var bins = histogram(data);
+
+  // Y axis: scale and draw:
+  var y = d3.scaleLinear()
+      .range([height, 0]);
+      y.domain([0, d3.max(bins, function(d) { return d.length; })]);   // d3.hist has to be called before the Y axis obviously
+  svg.append("g")
+      .call(d3.axisLeft(y));
+
+  // append the bar rectangles to the svg element
+  svg.selectAll("rect")
+      .data(bins)
+      .enter()
+      .append("rect")
+        .attr("x", 1)
+        .attr("transform", function(d) { return "translate(" + x(d.x0) + "," + y(d.length) + ")"; })
+        .attr("width", function(d) { return x(d.x1) - x(d.x0) -1 ; })
+        .attr("height", function(d) { return height - y(d.length); })
+        .style("fill", "#69b3a2")
+
 
 }
 
